@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محرر الأكواد البرمجية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        .terminal-font {
+            font-family: 'IBM Plex Mono', monospace;
+            direction: ltr;
+            text-align: left;
+            unicode-bidi: plaintext;
+        }
+        #editor {
+            min-height: 150px;
+            white-space: pre;
+            tab-size: 2;
+            outline: none;
+        }
+        #terminal-output {
+            min-height: 200px;
+            white-space: pre;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .output-line {
+            font-family: 'IBM Plex Mono', monospace;
+            direction: ltr;
+            text-align: left;
+            unicode-bidi: plaintext;
+            margin: 2px 0;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4">
+    <div class="container mx-auto max-w-4xl">
+        <!-- Header -->
+        <div class="bg-gray-800 rounded-t-lg p-2 flex items-center">
+            <div class="flex space-x-2 rtl:space-x-reverse">
+                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+            </div>
+            <div class="flex-1 text-center text-green-500 text-lg font-bold">
+                محرر الأكواد البرمجية
+            </div>
+        </div>
+
+        <!-- Editor -->
+        <div class="bg-gray-800 p-4 border-b border-gray-700">
+            <div id="editor" class="terminal-font text-green-500 bg-gray-900 p-4 rounded" contenteditable="true" spellcheck="false"></div>
+        </div>
+
+        <!-- Terminal Output -->
+        <div class="bg-gray-800 p-4">
+            <div id="terminal-output" class="terminal-font text-green-500 bg-gray-900 p-4 rounded"></div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="bg-gray-800 rounded-b-lg p-4 flex justify-between items-center">
+            <button id="helpBtn" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600">
+                مساعدة
+            </button>
+            <button id="clearBtn" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600">
+                مسح الشاشة
+            </button>
+            <button id="saveBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                حفظ
+            </button>
+            <button id="runBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                تشغيل
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Wait for DOM to load
+        window.addEventListener('DOMContentLoaded', () => {
+            const editor = document.getElementById('editor');
+            const terminalOutput = document.getElementById('terminal-output');
+            const clearBtn = document.getElementById('clearBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const runBtn = document.getElementById('runBtn');
+            const helpBtn = document.getElementById('helpBtn');
+
+            // Help command output
+            const helpText = `
+الأوامر المتاحة:
+  help    - عرض هذه القائمة
+  clear   - مسح الشاشة
+  save    - حفظ الكود الحالي
+  run     - تشغيل الكود الحالي
+  
+استخدم السهم لأعلى وأسفل للتنقل بين الأوامر السابقة
+            `;
+
+            function addOutput(text, className = '') {
+                const line = document.createElement('div');
+                line.textContent = text;
+                line.className = `output-line ${className}`;
+                terminalOutput.appendChild(line);
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            }
+
+            function executeCode() {
+                try {
+                    const code = editor.innerText;
+                    
+                    // Add command to output
+                    addOutput('> ' + code, 'text-gray-400');
+                    
+                    // Setup custom console
+                    const outputs = [];
+                    const customConsole = {
+                        log: function(...args) {
+                            outputs.push(args.join(' '));
+                        }
+                    };
+
+                    // Execute code with console
+                    (new Function('console', code))(customConsole);
+
+                    // Display outputs
+                    outputs.forEach(output => {
+                        addOutput(output, 'text-blue-500');
+                    });
+
+                    addOutput('تم تنفيذ الكود بنجاح', 'text-green-500');
+                } catch (error) {
+                    addOutput('خطأ: ' + error.message, 'text-red-500');
+                }
+            }
+
+            // Handle Enter key
+            editor.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    executeCode();
+                }
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    document.execCommand('insertText', false, '  ');
+                }
+            });
+
+            // Button handlers
+            clearBtn.addEventListener('click', () => {
+                terminalOutput.innerHTML = '';
+            });
+
+            saveBtn.addEventListener('click', () => {
+                const code = editor.innerText;
+                const blob = new Blob([code], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'code.txt';
+                a.click();
+                addOutput('تم حفظ الكود بنجاح!', 'text-green-500');
+            });
+
+            runBtn.addEventListener('click', executeCode);
+
+            helpBtn.addEventListener('click', () => {
+                addOutput(helpText);
+            });
+
+            // Focus editor on click anywhere in terminal
+            document.querySelector('.bg-gray-900').addEventListener('click', () => {
+                editor.focus();
+            });
+
+            // Initial focus
+            editor.focus();
+        });
+    </script>
+</body>
+</html>
